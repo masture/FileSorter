@@ -8,15 +8,15 @@
 import Foundation
 
 func sortFile(inputFilePath: String, outputFilePath: String) {
-    // 1. Read the file
     do {
         let fileContent = try String(contentsOfFile: inputFilePath, encoding: .utf8)
-        let lines = fileContent.components(separatedBy: "\n")
+        // Filter out blank lines
+        let lines = fileContent.components(separatedBy: "\n").filter { !$0.isEmpty }
 
-        // 2. Sort the lines alphabetically
-        let sortedLines = lines.sorted()
-        
-        // 3. Write the sorted lines to the output file
+        // Sort the lines alphabetically (case insensitive)
+        let sortedLines = lines.sorted { $0.lowercased() < $1.lowercased() }
+
+        // Write the sorted lines to the output file
         try sortedLines.joined(separator: "\n").write(toFile: outputFilePath, atomically: true, encoding: .utf8)
 
         print("File sorted successfully!")
@@ -24,6 +24,7 @@ func sortFile(inputFilePath: String, outputFilePath: String) {
         print("Error: \(error)")
     }
 }
+
 
 // 4. Command-line argument handling
 if CommandLine.arguments.count != 3 {
