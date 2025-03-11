@@ -7,38 +7,59 @@
 
 import Foundation
 
-func sortFile(inputFilePath: String, outputFilePath: String? = nil) {
-    do {
-        let fileContent = try String(contentsOfFile: inputFilePath, encoding: .utf8)
-        let lines = fileContent.components(separatedBy: "\n").filter { !$0.isEmpty }
-        let sortedLines = lines.sorted { $0.lowercased() < $1.lowercased() }
+func sortFile(inputPath: String, outputPath: String? = nil) {
+    let fileManager = FileManager.default
 
-        // Determine the output file path if not provided
-        let outputPath: String
-        if let outputFilePath = outputFilePath {
-            outputPath = outputFilePath
+    // Check if inputPath is a file or a directory
+    var isDirectory: ObjCBool = false
+    if fileManager.fileExists(atPath: inputPath, isDirectory: &isDirectory) {
+        if isDirectory.boolValue {
+            // Input is a directory, process all files within it
+            do {
+                let files = try fileManager.contentsOfDirectory(atPath: inputPath)
+                for file in files {
+                    let inputFilePath = inputPath + "/" + file
+                    let outputFilePath = outputPath ?? inputPath + "/" + file.replacingOccurrences(of: ".", with: "_output.")
+                    sortFile(inputPath: inputFilePath, outputPath: outputFilePath)
+                }
+            } catch {
+                print("Error: \(error)")
+            }
         } else {
-            // Get the file name and extension from the input file path
-            let fileName = inputFilePath.components(separatedBy: "/").last!
-            let fileExtension = fileName.components(separatedBy: ".").last!
-            // Construct the output file path in the same directory as the input file
-            outputPath = inputFilePath.replacingOccurrences(of: fileName, with: fileName.replacingOccurrences(of: ".", with: "_output."))
-        }
+            // Input is a file, process it directly
+            do {
+                let fileContent = try String(contentsOfFile: inputPath, encoding: .utf8)
+                let lines = fileContent.components(separatedBy: "\n").filter { !$0.isEmpty }
+                let sortedLines = lines.sorted { $0.lowercased() < $1.lowercased() }
 
-        try sortedLines.joined(separator: "\n").write(toFile: outputPath, atomically: true, encoding: .utf8)
-        print("File sorted successfully and saved to \(outputPath)!")
-    } catch {
-        print("Error: \(error)")
+                // Determine the output file path if not provided
+                let outputFilePath: String
+                if let outputPath = outputPath {
+                    outputFilePath = outputPath
+                } else {
+                    let fileName = inputPath.components(separatedBy: "/").last!
+                    let fileExtension = fileName.components(separatedBy: ".").last!
+                    outputFilePath = inputPath.replacingOccurrences(of: fileName, with: fileName.replacingOccurrences(of: ".", with: "_output."))
+                }
+
+                try sortedLines.joined(separator: "\n").write(toFile: outputFilePath, atomically: true, encoding: .utf8)
+                print("File sorted successfully and saved to \(outputFilePath)!")
+            } catch {
+                print("Error: \(error)")
+            }
+        }
+    } else {
+        print("Error: Input path does not exist: \(inputPath)")
     }
 }
 
 // Command-line argument handling
 if CommandLine.arguments.count < 2 || CommandLine.arguments.count > 3 {
-    print("Usage: FileSorter <input_file> [output_file]")
+    print("Usage: FileSorter <input_file_or_folder> [output_folder]")
     exit(1)
 }
 
-let inputFilePath = CommandLine.arguments[1]
-let outputFilePath = CommandLine.arguments.count == 3 ? CommandLine.arguments[2] : nil
+let inputPath = CommandLine.arguments[1]
+let outputPath = CommandLine.arguments.count == 3 ? CommandLine.arguments[2] : nil
 
-sortFile(inputFilePath: inputFilePath, outputFilePath: outputFilePath)
+sortFile(inputPath: inputPath, outputPath: outputPath)
